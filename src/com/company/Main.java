@@ -6,10 +6,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 
-class CommandManager {
+/*class CommandManager {
     enum guestCommands {time, exit}
     enum adminCommands{time, status, exit, stop , }
-
 }
 
 class LoginManager{
@@ -17,59 +16,10 @@ class LoginManager{
     private int guestSessions=0;
     private static boolean adminLogon=false;
     private boolean adminRelogin=true;
-    private String login;
     private Socket clientSocket;
 
 
-    //login function
-    public boolean login (Socket s) throws IOException {
-        BufferedReader br=new BufferedReader(new InputStreamReader(s.getInputStream()));
-        BufferedWriter bw=new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
 
-        switch((login=br.readLine())){
-            case "admin":
-                if(adminLogon==true){
-                    bw.write("user admin is already login , do you want to reopen session with this connection? (y/n, no - default):");
-                    bw.flush();
-                    switch(br.readLine().toLowerCase()){
-                        case "y":
-                            //some operation to replace admin session
-                            return true;
-                        default:
-                            bw.write("Glad to see you! bye!");
-                            bw.flush();
-                            return false;
-                    }
-                } else {
-                    adminLogon = true;
-                    return true;
-                }
-            case "guest":
-                if(maxGuest<30) {
-                    guestSessions++;
-                    return true;
-                }
-            default:
-                bw.write("Only guest or admin can login\n");
-                bw.flush();
-                return false;
-        }
-    }
-
-    //Logoff function
-    public void logoff(ClientConnection cc){
-        //not implemented yet
-    }
-
-    //Return number of active sessions
-    public int getSessionsCount(){
-        if(adminLogon)return guestSessions+1;
-        return guestSessions;
-    }
-
-    public static int getMaxSessions(){
-        return maxGuest+1;
-    }
 }
 
 
@@ -97,77 +47,99 @@ class ClientManager{
 
 }
 
+class User{
+    private String login;
+    private Map<User,ClientConnection> userMap;
+    private ArrayList<String> roles;
+
+
+}*/
+
+class Acceptor {
+    ServerSocket ss;
+    Socket cs;
+    int connections;
+
+    public Acceptor() {
+        try {
+            ss = new ServerSocket(3366);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Acceptor(int listenPort) {
+        try {
+            ss = new ServerSocket(listenPort);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void startMainThread() {
+        while (true) {
+            try {
+                cs = ss.accept();
+                ClientConnection cc=new ClientConnection(cs);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+
+}//end of the class Acceptor
+
+
 class ClientConnection implements Runnable {
     private UUID uuid;
     private Random r;
     private Socket clSocket;
     private Inet4Address clIPV4;
-    private static int sessionId;
+    private  int sessionId;
     private Thread clThread;
+
 
     public ClientConnection(Socket s){
         clSocket=s;
         r=new Random();
         clIPV4= (Inet4Address) clSocket.getInetAddress();
-        uuid=new UUID(r.nextLong(),r.nextLong());
+        uuid=new UUID(r.nextLong(),r.nextLong()+5);
         sessionId=uuid.variant();
         clThread=new Thread(this,"clConnection");
+        clThread.start();
     }
+
 
     public void run(){
-
+        try {
+            BufferedReader br=new BufferedReader(new InputStreamReader(clSocket.getInputStream()));
+            BufferedWriter bw=new BufferedWriter(new OutputStreamWriter(clSocket.getOutputStream()));
+            bw.write("hellow new realisation\n");
+            bw.flush();
+            bw.write(sessionId+"\n"+clIPV4+"\n");
+            bw.flush();
+            bw.write("Bye!\n");
+            Thread.sleep(10000);
+            bw.close();
+            br.close();
+            clSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
-}
+}// end ClientConnection
 
 
 public class Main {
 
-    public static void main(String[] args) throws IOException {
-        int portNumber = 3366;
-        int backlog = 3;
-        Date serverStartedAt;
-        String hello = "Please login: ";
+    public static void main(String[] args) {
 
-
-        ServerSocket ss = new ServerSocket(portNumber, backlog);
-        serverStartedAt = new Date();
-        while (true) {
-            ss.accept();
-
-
-
-
-
-           /* for (int i = 0; i < hello.length; i++) {
-                //outputStrearite(hello.charAt(i));
-                bufferedOutputStream.write(hello[i]);
-                bufferedOutputStream.flush();
-            }*/
-            /*while(!exit) {
-                bw.write(login+">");
-                bw.flush();
-                command = br.readLine();
-
-                switch (command.toString()) {
-                    case "exit":
-                        bw.write("Good bye!\n");
-                        bw.flush();
-                        exit=true;
-                        break;
-                    case "time":
-                        bw.write(new Date(System.currentTimeMillis()).toString() + "\n");
-                        bw.flush();
-                        break;
-                    default:
-                        break;
-
-                }
-
-            }
-            s.close();
-*/
-
-        }
+        Acceptor mainServer = new Acceptor(3366);
+        mainServer.startMainThread();
 
     }
 }
